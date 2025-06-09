@@ -10,33 +10,32 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-from pathlib import Path
+from pathlib import Path # Modern OS safe way to handle filesystem paths
 import os
 import environ
 
 # Initializing django environment
-
 env = environ.Env(
     # set casting and default values
-    DEBUG=(bool, False)
+    DEBUG=(bool, False) # Notes that Debug is expected to be returned as a boolean env variables but take note, that debug takes the default False esp for production cases.
 )
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Read environmental variables from the .env files
+# Read environmental variables from the .env files, this one loads the .env file where we store secret variables
 environ.Env.read_env(os.path.join(BASE_DIR,'.env'))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-gtv#_z7@*u71#ld5#-hcvznc%!8lcp8q)9&vo&7kpacjhu6n=c'
+SECRET_KEY = env('SECRET_KEY')
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
+DEBUG = env('DEBUG')  # To enble debug mode. SInce we do not debug in production, debug mode is always False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = []  # List of hostnames that djangowill serve it could be something like "yourdoman.com"
 
 
 # Application definition
@@ -56,12 +55,14 @@ INSTALLED_APPS = [
     'drf_yasg',
 ]
 
+# Middlwares are a chain of components in between the request and response, upon a request, thye can modify, check, block or let it through.
+
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMidddleware',
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',   # To allow cross-origin requests
+    'django.middleware.security.SecurityMiddleware', # Add security headers
+    'django.contrib.sessions.middleware.SessionMiddleware', # enables django sessions (cookies)
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware', # Protection against cross site request forgery attacks
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -84,7 +85,9 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'alx_travel_app.wsgi.application'
+
+#This is like a translator between the web server and django app...
+WSGI_APPLICATION = 'alx_travel_app.wsgi.application' # WEb server gateway interface, this is standard way for python apps to talk to the webserver
 
 
 # Database
@@ -110,6 +113,8 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
+
+#Password validators
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -175,7 +180,7 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "htt;://localhost:8080",
+    "http://localhost:8080",
 ]
 
 # Allow credentials to be included in the CORS request
@@ -185,16 +190,22 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_HEADERS = True
 
 # Swagger settings
+#They define how authentication will be handled in swagger UI
+#Swagger is meant to automatically document API, validating it, the requests and everything.
+# Swagger also tests our API endpoints
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
-        'Token' :{
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header'
+        # Token = label that will appear in Swagger UI
+        'Token' :{ 
+            'type': 'apiKey', # says that auth is done via the api key and not JWT built-in,in django, the API KEY is usually token-based-auth where the HTTP request is sent
+            'name': 'Authorization', # name of the HTTP header, swagger will prompt the user to enter the token and then it will send this header
+            'in': 'header' # specifies that the token will go the header
         }
+
+        # It's like telling swagger My API expects token authentication via HTTP authorization Header
     },
-    'USE_SESSION_AUTH': False,
-    'JSON_EDITOR': True,
+    'USE_SESSION_AUTH': False, # Tells swagger that it should not allow the option to login via Django Session Auth
+    'JSON_EDITOR': True,  #Allows the editting of the request header as JSON raw file this is useful when testing the POST and PUT requests
     'SUP[PORTED_SUBMIT_METHODS': [
         'get',
         'post',
@@ -205,25 +216,26 @@ SWAGGER_SETTINGS = {
 }
 
 #Celery configuration (for background tasks)
-CELERY_BROKER_URL = 'amqp://localhost' # RabbitMQ broker
-CELERY_RESULT_BACKEND = 'django-db' # Store
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json',
+CELERY_BROKER_URL = 'amqp://localhost' # RabbitMQ broker....Tells celery which broker to use, the broker is like a task queue
+# The broker stores task that are waiting to be run AMPQ = Advaned Message Queueing Protocal that runs locally
+CELERY_RESULT_BACKEND = 'django-db' # Tells celery where to store the task results
+CELERY_ACCEPT_CONTENT = ['json'] # Upon sending a task it is converted to JSON
+CELERY_TASK_SERIALIZER = 'json', # Upon storing the task, it is stored as a JSON
 CELERY_RESULT_SERIALIZER = 'json',
-CELERY_TIMEZONE = TIME_ZONE
+CELERY_TIMEZONE = TIME_ZONE  #Tells celery which timezone to use when handling tasks that are time dependent
 
 
 #Logging configuration
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
+    'disable_existing_loggers': False,  # Allow exisiting loggers to continue working
+    'handlers': { #Defines where the log messages go to....
         'file':{
             'level': 'INFO',
             'class' : 'logging.FileHandler',
             'filename': BASE_DIR / 'logs'/ 'django.log',
         },
-        'console': {
+        'console': { # Prints the lohgs to the console
             'level': 'DEBUG', 
             'class': 'logging.StreamHandler',
         },
